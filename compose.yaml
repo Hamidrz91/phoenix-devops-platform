@@ -1,0 +1,10 @@
+services:
+  phoenix:
+    build:
+      context: .
+      network: host
+    image: phoenix-app:1.0
+    container_name: phoenix-app
+    ports:
+      - "8080:5000"
+    restart: unless-stopped
