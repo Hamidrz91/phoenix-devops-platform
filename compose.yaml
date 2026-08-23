@@ -2,9 +2,37 @@ services:
   phoenix:
     build:
       context: .
-      network: host
     image: phoenix-app:1.0
     container_name: phoenix-app
     ports:
       - "8080:5000"
     restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_NAME: phoenix_db
+      DB_USER: phoenix
+      DB_PASSWORD: phoenix_pass
+    networks:
+      - frontend-net
+      - backend-net
+  db:
+    image: postgres:16-alpine
+    container_name: phoenix-db
+    environment:
+      POSTGRES_USER: phoenix
+      POSTGRES_PASSWORD: phoenix_pass
+      POSTGRES_DB: phoenix_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+volumes:
+  pg_data:
+
+networks:
+  frontend-net:
+  backend-net:
