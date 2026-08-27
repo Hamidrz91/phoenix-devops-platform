@@ -21,3 +21,9 @@
         state: started
         enabled: true
       become: true
+
+    - name: Deploy Phoenix with Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ playbook_dir }}/.."
+        state: present
+        pull: always

@@ -1,8 +1,6 @@
 services:
   phoenix:
-    build:
-      context: .
-    image: phoenix-app:1.0
+    image: ghcr.io/hamidrz91/phoenix-app:latest
     container_name: phoenix-app
     ports:
       - "8080:5000"
