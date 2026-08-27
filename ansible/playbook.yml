@@ -1,0 +1,23 @@
+---
+- name: Configure Phoenix server
+  hosts: phoenix
+  gather_facts: true
+
+  tasks:
+    - name: Confirm Ansible is managing Phoenix
+      ansible.builtin.debug:
+        msg: "Phoenix is being managed by Ansible."
+
+    - name: Gather service information
+      ansible.builtin.service_facts:
+
+    - name: Show Docker service status
+      ansible.builtin.debug:
+        msg: "Docker service state: {{ ansible_facts.services['docker.service'].state }}"
+
+    - name: Ensure Docker service is running and enabled
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+      become: true
