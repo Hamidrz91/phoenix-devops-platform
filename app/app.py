@@ -24,7 +24,7 @@ def db_check():
             host=os.environ.get("DB_HOST", "db"),
             dbname=os.environ.get("DB_NAME", "phoenix_db"),
             user=os.environ.get("DB_USER", "phoenix"),
-            password=os.environ.get("DB_PASSWORD", "phoenix_pass"),
+            password=os.environ["DB_PASSWORD"],
             connect_timeout=3
         )
         conn.close()
