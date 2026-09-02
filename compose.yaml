@@ -28,8 +28,23 @@ services:
     networks:
       - backend-net
 
+  prometheus:
+    image: prom/prometheus:v3.13.2
+    container_name: phoenix-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    depends_on:
+      - phoenix
+    networks:
+      - frontend-net
+
 volumes:
   pg_data:
+  prometheus_data:
 
 networks:
   frontend-net:
