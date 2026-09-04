@@ -60,12 +60,43 @@ services:
       - prometheus
     networks:
       - frontend-net
-
+  loki:
+    image: grafana/loki:3.7.2
+    container_name: phoenix-loki
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    restart: unless-stopped
+    networks:
+      - frontend-net
+  alloy:
+    image: grafana/alloy:v1.19.0
+    container_name: phoenix-alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "127.0.0.1:12345:12345"
+    volumes:
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    restart: unless-stopped
+    depends_on:
+      - loki
+    networks:
+      - frontend-net
 volumes:
   pg_data:
   prometheus_data:
   grafana_data:
-
+  loki_data:
+  alloy_data:
 networks:
   frontend-net:
   backend-net:
