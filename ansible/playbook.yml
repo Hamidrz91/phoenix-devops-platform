@@ -29,6 +29,22 @@
         mode: "0600"
       no_log: true
 
+    - name: Ensure Tempo data volume exists
+      community.docker.docker_volume:
+        name: phoenix_tempo_data
+        state: present
+      register: tempo_volume
+
+    - name: Set Tempo data volume ownership
+      ansible.builtin.file:
+        path: "{{ tempo_volume.volume.Mountpoint }}"
+        state: directory
+        owner: "10001"
+        group: "10001"
+        mode: "0755"
+        recurse: true
+      become: true
+
     - name: Deploy Phoenix with Docker Compose
       community.docker.docker_compose_v2:
         project_src: "{{ playbook_dir }}/.."

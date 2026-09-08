@@ -3,25 +3,84 @@ import socket
 import psycopg2
 import os
 import time
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Counter, Histogram
+
+from prometheus_client import (
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+)
+
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+
+
+# -------------------------------------------------------------------
+# OpenTelemetry tracing
+# -------------------------------------------------------------------
+
+resource = Resource.create(
+    {
+        "service.name": os.environ.get("OTEL_SERVICE_NAME", "phoenix"),
+    }
+)
+
+tracer_provider = TracerProvider(resource=resource)
+
+otlp_exporter = OTLPSpanExporter(
+    endpoint=os.environ.get(
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+        "http://alloy:4318/v1/traces",
+    )
+)
+
+tracer_provider.add_span_processor(
+    BatchSpanProcessor(otlp_exporter)
+)
+
+trace.set_tracer_provider(tracer_provider)
+
+
+# -------------------------------------------------------------------
+# Flask application
+# -------------------------------------------------------------------
 
 app = Flask(__name__)
+
+FlaskInstrumentor().instrument_app(
+    app,
+    excluded_urls="/metrics",
+)
+
+Psycopg2Instrumentor().instrument()
+
+
+# -------------------------------------------------------------------
+# Prometheus metrics
+# -------------------------------------------------------------------
 
 REQUEST_COUNT = Counter(
     "phoenix_http_requests_total",
     "Total number of HTTP requests",
-    ["method", "endpoint", "status"]
+    ["method", "endpoint", "status"],
 )
 
 REQUEST_LATENCY = Histogram(
     "phoenix_http_request_duration_seconds",
     "HTTP request latency in seconds",
-    ["method", "endpoint"]
+    ["method", "endpoint"],
 )
+
 
 @app.before_request
 def start_request_timer():
     g.request_start_time = time.perf_counter()
+
 
 @app.after_request
 def record_request(response):
@@ -33,12 +92,12 @@ def record_request(response):
     REQUEST_COUNT.labels(
         method=request.method,
         endpoint=endpoint,
-        status=response.status_code
+        status=response.status_code,
     ).inc()
 
     REQUEST_LATENCY.labels(
         method=request.method,
-        endpoint=endpoint
+        endpoint=endpoint,
     ).observe(time.perf_counter() - g.request_start_time)
 
     return response
@@ -52,13 +111,19 @@ def home():
     <p>Hostname: {socket.gethostname()}</p>
     """
 
+
 @app.route("/health")
 def health():
     return {"status": "healthy"}
 
+
 @app.route("/metrics")
 def metrics():
-    return Response(generate_latest(), content_type=CONTENT_TYPE_LATEST)
+    return Response(
+        generate_latest(),
+        content_type=CONTENT_TYPE_LATEST,
+    )
+
 
 @app.route("/db-check")
 def db_check():
@@ -68,12 +133,23 @@ def db_check():
             dbname=os.environ.get("DB_NAME", "phoenix_db"),
             user=os.environ.get("DB_USER", "phoenix"),
             password=os.environ["DB_PASSWORD"],
-            connect_timeout=3
+            connect_timeout=3,
         )
+
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+
         conn.close()
+
         return {"database": "connected"}
+
     except Exception as e:
-        return {"database": "failed", "error": str(e)}, 500
+        return {
+            "database": "failed",
+            "error": str(e),
+        }, 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

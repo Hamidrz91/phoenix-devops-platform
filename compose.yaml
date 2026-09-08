@@ -7,11 +7,14 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+      - alloy
     environment:
       DB_HOST: ${DB_HOST}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
     networks:
       - frontend-net
       - backend-net
@@ -89,14 +92,30 @@ services:
     restart: unless-stopped
     depends_on:
       - loki
+      - tempo
     networks:
       - frontend-net
+  tempo:
+    image: grafana/tempo:3.0.2
+    container_name: phoenix-tempo
+    command:
+      - -config.file=/etc/tempo/tempo.yml
+    ports:
+      - "127.0.0.1:3200:3200"
+    volumes:
+      - ./monitoring/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/data/tempo
+    restart: unless-stopped
+    networks:
+      - frontend-net
+
 volumes:
   pg_data:
   prometheus_data:
   grafana_data:
   loki_data:
   alloy_data:
+  tempo_data:
 networks:
   frontend-net:
   backend-net:
