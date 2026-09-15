@@ -6,3 +6,4 @@ opentelemetry-sdk==1.44.0
 opentelemetry-exporter-otlp-proto-http==1.44.0
 opentelemetry-instrumentation-flask==0.65b0
 opentelemetry-instrumentation-psycopg2==0.65b0
+gunicorn==26.2.0
