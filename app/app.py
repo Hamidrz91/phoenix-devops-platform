@@ -54,7 +54,7 @@ app = Flask(__name__)
 
 FlaskInstrumentor().instrument_app(
     app,
-    excluded_urls="/metrics",
+    excluded_urls="/metrics,/health",
 )
 
 Psycopg2Instrumentor().instrument()
@@ -86,7 +86,7 @@ def start_request_timer():
 def record_request(response):
     endpoint = request.endpoint or "unknown"
 
-    if endpoint == "metrics":
+    if endpoint in {"metrics", "health"}:
         return response
 
     REQUEST_COUNT.labels(
